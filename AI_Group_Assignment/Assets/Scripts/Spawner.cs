@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Spawner : MonoBehaviour
 {
-
+    public float lifeTime;
     public float queueTime = 1.5f;
     private float time = 0;
     public GameObject obstacle;
@@ -27,7 +27,7 @@ public class Spawner : MonoBehaviour
 
             time = 0;
 
-            Destroy(go, 10);
+            Destroy(go, lifeTime);
         }
 
         time += Time.deltaTime;
