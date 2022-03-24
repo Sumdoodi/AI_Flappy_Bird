@@ -5,20 +5,32 @@ using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
+    public bool useAI = false;
+    [Header("Options")]
     public float jumpHeight = 10;
 
-    // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
-        
+        //AIData t = new AIData(1);
+        //SaveLoadAI.Save(t);
+        //Debug.Log("Data Saved");
+        //t = SaveLoadAI.Load();
+        //Debug.Log("Data Loaded");
+        //Debug.Log(t.test);
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (useAI)
         {
-            this.gameObject.GetComponent<Rigidbody2D>().velocity = Vector2.up * jumpHeight;
+
+        } else
+        {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                this.gameObject.GetComponent<Rigidbody2D>().velocity = Vector2.up * jumpHeight;
+            }
         }
     }
 
