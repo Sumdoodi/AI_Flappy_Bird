@@ -41,7 +41,7 @@ public class CanvasController : MonoBehaviour
         generationText.transform.GetChild(1).GetComponent<Text>().text = $"{current}/{total}";
     }
 
-    public void UpdateBackPropagation(bool controlledByPlayer, double percentComplete, bool netDidJump, float netRawOut)
+    public void UpdateBackPropagation(bool controlledByPlayer, double percentComplete, bool netDidJump, double netRawOut)
     {
         if (controlledByPlayer)
         {

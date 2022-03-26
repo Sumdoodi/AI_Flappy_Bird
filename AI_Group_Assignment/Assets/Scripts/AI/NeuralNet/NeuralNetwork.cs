@@ -317,7 +317,7 @@ namespace AI
             return layers[layers.Length - 1].outputs; // return output from last layer
         }
 
-        
+
 
         public void BackPropagation(float[] expected)
         {
@@ -493,12 +493,17 @@ namespace AI
 
             return outputs;
         }
+
         public static float Sigmoid(double value)
         {
             float k = (float)Math.Exp(value);
             return k / (1.0f + k);
         }
 
+        public static float SigmoidPrime(double value)
+        {
+            return Sigmoid(value) * (1.0f - Sigmoid(value));
+        }
 
         /// <summary>
         /// Calculate the derivative of a TanH value
@@ -517,7 +522,7 @@ namespace AI
                 error[i] = outputs[i] - expected[i];
 
             for (int i = 0; i < numberOfOutputs; i++)
-                gamma[i] = error[i] * TanHPrime(outputs[i]);
+                gamma[i] = error[i] * SigmoidPrime(outputs[i]);
 
             for (int i = 0; i < numberOfOutputs; i++)
             {
@@ -540,7 +545,7 @@ namespace AI
                     gamma[i] += gammaForward[j] * forwardWeights[j, i];
                 }
 
-                gamma[i] *= TanHPrime(outputs[i]);
+                gamma[i] *= SigmoidPrime(outputs[i]);
             }
 
             for (int i = 0; i < numberOfOutputs; i++)

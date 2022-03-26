@@ -87,7 +87,7 @@ public class AIManager : MonoBehaviour
                 // spawn bird
                 birdController = Instantiate(backPropagationPrefab, new Vector3(-2.14f, 1.55f, -0.265f), Quaternion.identity).GetComponent<BirdController>();
                 bpNetwork = new NeuralNetwork(netLayers.ToArray(), learningRate);
-                canvasController.UpdateBackPropagation(isPlayerControlled, 0.0d, false, 0.0f);
+                canvasController.UpdateBackPropagation(isPlayerControlled, 0.0d, false, 0.0d);
                 break;
         }
 
@@ -299,8 +299,8 @@ public class AIManager : MonoBehaviour
     {
         double percentComplete = (double)dataPointsCollected / targetDataPoints * 100.0d;
         percentComplete = System.Math.Round(percentComplete, 1); // round to one decimal places
-        //double netRawOutRound = System.Math.Round(netRawOut[0], 2); // round to two decimal places
-        canvasController.UpdateBackPropagation(isPlayerControlled, percentComplete, netDidJump, netRawOut[0]);
+        double netRawOutRound = System.Math.Round(netRawOut[0], 2); // round to two decimal places
+        canvasController.UpdateBackPropagation(isPlayerControlled, percentComplete, netDidJump, netRawOutRound);
         netDidJump = false;
     }
 
