@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using AI;
 
-// TODO: update inputs, 
+// TODO: Game states, wait for player decision on each frame,
+// ask network for its output based on inputs, back propagate
+// based on player decision
+
+public enum TrainingType { GENERATIONS, BACK_PROPAGATION }
 
 /// <summary>
 /// This is the class used to handle the AI's training.
@@ -14,18 +18,24 @@ using AI;
 /// </summary>
 public class AIManager : MonoBehaviour
 {
+    public TrainingType trainingType;
 
-    [Header("Training Parameters")]
+    [Header("Generation Training Parameters")]
     public int generations;
     public int networksPerGeneration;
+    public float mutationStrength;
+
+    [Header("Back Propagation Training Parameters")]
+    public float learningRate;
+    public uint targetDataPoints;
 
     [Header("Network Parameters")]
-    public int[] hiddenLayers;
-    public float mutationStrength;
     public float activation;
+    public int[] hiddenLayers;
 
-    [Header("Bird Prefab")]
-    public GameObject prefab;
+    [Header("Bird Prefabs")]
+    public GameObject generationPrefab;
+    public GameObject backPropagationPrefab;
 
     [Header("References")]
     public Spawner spawner;
@@ -44,6 +54,12 @@ public class AIManager : MonoBehaviour
     private float currentScore = 0.0f;
     private float speed = 10.0f;
 
+    private bool isPlayerControlled = true;
+    private uint dataPointsCollected = 0;
+    private NeuralNetwork bpNetwork;
+    private BirdController birdController;
+    private bool died = false;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -51,15 +67,29 @@ public class AIManager : MonoBehaviour
         netLayers.Insert(0, 5);
         netLayers.Add(1);
 
-        for (int i = 0; i < networksPerGeneration; i++)
+        // populate the list of networks if training by generation
+        // spawn the playable bird prefab if training by back propagation
+        switch (trainingType)
         {
-            NeuralNetwork current = new NeuralNetwork(netLayers.ToArray(), mutationStrength);
-            generation.Add(current);
-            birds[current] = NewBird();
+            case TrainingType.GENERATIONS:
+                for (int i = 0; i < networksPerGeneration; i++)
+                {
+                    NeuralNetwork current = new NeuralNetwork(netLayers.ToArray(), mutationStrength);
+                    generation.Add(current);
+                    birds[current] = NewBird();
+                    canvasController.UpdateGeneration(currentGeneration, generations);
+                    birdsAlive = networksPerGeneration;
+                }
+                break;
+            case TrainingType.BACK_PROPAGATION:
+                // spawn bird
+                birdController = Instantiate(backPropagationPrefab, new Vector3(-2.14f, 1.55f, -0.265f), Quaternion.identity).GetComponent<BirdController>();
+                bpNetwork = new NeuralNetwork(netLayers.ToArray(), learningRate);
+                canvasController.UpdateBackPropagation(isPlayerControlled, 0.0f);
+                break;
         }
 
-        canvasController.UpdateGeneration(currentGeneration, generations);
-        birdsAlive = networksPerGeneration;
+        canvasController.SetTrainingType(trainingType);
 
         CustomEvents.Instance.BirdDied.AddListener(OnBirdDied);
     }
@@ -67,38 +97,42 @@ public class AIManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!spawner.spawnedFirstObstacle)
+        switch (trainingType)
         {
-            //Debug.Log("waiting");
-            return;
-        }
-
-
-        if (currentGeneration <= generations)
-        {
-            // if there is still at least one bird alive
-            if (birdsAlive > 0)
-            {
-                
-                UpdateInputs();
-
-                for (int i = 0; i < generation.Count; i++)
+            case TrainingType.GENERATIONS:
                 {
-                    try
+                    if (!spawner.spawnedFirstObstacle)
                     {
-                        AIController temp;
-                        birds.TryGetValue(generation[i], out temp);
-                    }
-                    catch
-                    {
-                        Debug.Log("generation[i] not found failed");
+                        //Debug.Log("waiting");
+                        return;
                     }
 
-                    // skip if the AI died
-                    if (birds[generation[i]].gameObject.activeSelf == false) continue;
 
-                    // ask network for its decision
-                    float[] output = generation[i].FeedForward(new float[] {
+                    if (currentGeneration <= generations)
+                    {
+                        // if there is still at least one bird alive
+                        if (birdsAlive > 0)
+                        {
+
+                            UpdateInputs();
+
+                            for (int i = 0; i < generation.Count; i++)
+                            {
+                                try
+                                {
+                                    AIController temp;
+                                    birds.TryGetValue(generation[i], out temp);
+                                }
+                                catch
+                                {
+                                    Debug.Log("generation[i] not found failed");
+                                }
+
+                                // skip if the AI died
+                                if (birds[generation[i]].gameObject.activeSelf == false) continue;
+
+                                // ask network for its decision
+                                float[] output = generation[i].FeedForward(new float[] {
                         birds[generation[i]].transform.position.y,                      // the bird's height
                         birds[generation[i]].GetComponent<Rigidbody2D>().velocity.y,    // the bird's vertical velocity
                         pipeXPos - birds[generation[i]].transform.position.x,           // distance to the next pipe
@@ -106,62 +140,140 @@ public class AIManager : MonoBehaviour
                         pipeLowerHeight                                                 // next pipe's lower bound
                     });
 
-                    Debug.Log(output[0]);
-                    // make the bird just if the network's output is greater than the activation
-                    if (output[0] >= activation)
+                                Debug.Log(output[0]);
+                                // make the bird just if the network's output is greater than the activation
+                                if (output[0] >= activation)
+                                {
+                                    birds[generation[i]].Jump();
+                                    Debug.Log($"Bird {i} jumped");
+                                }
+
+                                // increate the networks fitness by the amount of distance it covered without dying this frame
+                                generation[i].IncreaseFitnessBy(Time.deltaTime * speed);
+                            }
+                        }
+                        else // end of generation
+                        {
+                            // reset dictionary
+                            birds = new Dictionary<NeuralNetwork, AIController>();
+
+                            // sort generation by fitness
+                            generation.Sort();
+
+                            // reset generation list while keeping top performer
+                            NeuralNetwork temp = generation[0];
+                            generation.Clear();
+                            generation.Add(temp);
+
+                            birds[generation[0]] = NewBird();
+
+                            // fill the rest of the list with mutated versions of the top performer
+                            for (int i = 1; i < networksPerGeneration; i++)
+                            {
+                                generation.Add(new NeuralNetwork(generation[0], 0.25f));
+                                birds[generation[i]] = NewBird();
+                            }
+
+                            // increment current generation
+                            currentGeneration++;
+
+                            // update generation UI text
+                            canvasController.UpdateGeneration(currentGeneration, generations);
+
+                            // reset current score
+                            currentScore = 0;
+
+                            // reset birds alive
+                            birdsAlive = networksPerGeneration;
+
+                            // clear all pipes
+                            spawner.Clean();
+                        }
+                    }
+                    else // we've gone through all generations
                     {
-                        birds[generation[i]].Jump();
-                        Debug.Log($"Bird {i} jumped");
+                        // TODO: stop the game, show highest score
+                        // maybe sort generation by fitness and save top performer to disk
+                        Debug.Log("DONE");
+                    }
+                    break;
+                }
+            case TrainingType.BACK_PROPAGATION:
+                {
+                    if (!spawner.spawnedFirstObstacle) return;
+
+                    // reset the game if bird died
+                    if (died)
+                    {
+                        spawner.Clean();
+                        birdController.gameObject.GetComponent<Rigidbody2D>().velocity = Vector3.zero;
+                        birdController.transform.position = new Vector3(-2.14f, 1.55f, -0.265f);
+                        died = false;
+                        return; // skip this loop
                     }
 
-                    // increate the networks fitness by the amount of distance it covered without dying this frame
-                    generation[i].IncreaseFitnessBy(Time.deltaTime * speed);
+                    // check for tab key, toggle isPlayerControlled
+                    if (Input.GetKeyDown(KeyCode.Tab))
+                    {
+                        isPlayerControlled = !isPlayerControlled;
+                        UpdateUI();
+                    }
+
+                    UpdateInputs();
+
+                    if (isPlayerControlled) // teach the network based on the player's decisions
+                    {
+                        bool playerDidJump = false;
+                        if (Input.GetKeyDown(KeyCode.Space))
+                        {
+                            birdController.Jump();
+                            playerDidJump = true;
+                        }
+
+                        // teach the network
+                        bpNetwork.FeedForward(new float[]
+                        {
+                            birdController.transform.position.y,
+                            birdController.gameObject.GetComponent<Rigidbody2D>().velocity.y,
+                            pipeXPos - birdController.transform.position.x,
+                            pipeUpperHeight,
+                            pipeLowerHeight
+                        });
+
+                        if (playerDidJump)
+                        {
+                            bpNetwork.BackPropagation(new float[] { 0.5f });
+                        }
+                        else
+                        {
+                            bpNetwork.BackPropagation(new float[] { -0.5f });
+                        }
+
+                        dataPointsCollected += 1;
+
+                        UpdateUI();
+                    }
+                    else // allow the network to play
+                    {
+                        float decision = bpNetwork.FeedForward(new float[]
+                        {
+                            birdController.transform.position.y,
+                            birdController.gameObject.GetComponent<Rigidbody2D>().velocity.y,
+                            pipeXPos - birdController.transform.position.x,
+                            pipeUpperHeight,
+                            pipeLowerHeight
+                        })[0];
+
+                        if (decision > activation)
+                        {
+                            birdController.Jump();
+                        }
+                    }
+                    break;
                 }
-            }
-            else // end of generation
-            {
-                // reset dictionary
-                birds = new Dictionary<NeuralNetwork, AIController>();
-
-                // sort generation by fitness
-                generation.Sort();
-
-                // reset generation list while keeping top performer
-                NeuralNetwork temp = generation[0];
-                generation.Clear();
-                generation.Add(temp);
-
-                birds[generation[0]] = NewBird();
-
-                // fill the rest of the list with mutated versions of the top performer
-                for (int i = 1; i < networksPerGeneration; i++)
-                {
-                    generation.Add(new NeuralNetwork(generation[0], 0.25f));
-                    birds[generation[i]] = NewBird();
-                }
-
-                // increment current generation
-                currentGeneration++;
-
-                // update generation UI text
-                canvasController.UpdateGeneration(currentGeneration, generations);
-
-                // reset current score
-                currentScore = 0;
-
-                // reset birds alive
-                birdsAlive = networksPerGeneration;
-
-                // clear all pipes
-                spawner.Clean();
-            }
         }
-        else // we've gone through all generations
-        {
-            // TODO: stop the game, show highest score
-            // maybe sort generation by fitness and save top performer to disk
-            Debug.Log("DONE");
-        }
+
+
     }
 
     public void UpdateInputs()
@@ -175,12 +287,26 @@ public class AIManager : MonoBehaviour
     private AIController NewBird()
     {
         // hard coded to the same starting position as the game
-        return Instantiate(prefab, new Vector3(-2.14f, 1.55f, -0.265f), Quaternion.identity, transform).GetComponent<AIController>();
+        return Instantiate(generationPrefab, new Vector3(-2.14f, 1.55f, -0.265f), Quaternion.identity, transform).GetComponent<AIController>();
+    }
+
+    private void UpdateUI()
+    {
+        double percentComplete = (double)dataPointsCollected / targetDataPoints * 100.0d;
+        percentComplete = System.Math.Round(percentComplete, 1); // round to one decimal
+        canvasController.UpdateBackPropagation(isPlayerControlled, percentComplete);
     }
 
     public void OnBirdDied()
     {
-        birdsAlive--;
-        Debug.Log("biird dead");
+        switch (trainingType)
+        {
+            case TrainingType.GENERATIONS:
+                birdsAlive--;
+                break;
+            case TrainingType.BACK_PROPAGATION:
+                died = true;
+                break;
+        }
     }
 }
