@@ -575,6 +575,7 @@ MonoBehaviour:
   lifeTime: 3
   queueTime: 1.5
   obstacle: {fileID: 7841618595777583101, guid: f746d3870e559864ca666517c194fada, type: 3}
+  spawnedFirstObstacle: 0
   height: 2
 --- !u!4 &1378615812
 Transform:
@@ -971,6 +972,7 @@ GameObject:
   - component: {fileID: 1946681876}
   - component: {fileID: 1946681875}
   - component: {fileID: 1946681874}
+  - component: {fileID: 1946681877}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -1026,3 +1028,15 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1946681877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1946681873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1c99305139abd54f972a2d0d0163c2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

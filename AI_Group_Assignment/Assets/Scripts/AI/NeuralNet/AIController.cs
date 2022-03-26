@@ -22,6 +22,7 @@ public class AIController : MonoBehaviour
 
         dead = true;
         gameObject.GetComponent<Rigidbody2D>().isKinematic = true;
+        CustomEvents.BirdDied.Invoke();
         //if(collision.gameObject.tag == "Obstacles")
         //{
         //SceneManager.LoadScene(0);

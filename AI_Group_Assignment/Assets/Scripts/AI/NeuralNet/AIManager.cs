@@ -14,6 +14,7 @@ using AI;
 /// </summary>
 public class AIManager : MonoBehaviour
 {
+
     [Header("Training Parameters")]
     public int generations;
     public int networksPerGeneration;
@@ -39,6 +40,7 @@ public class AIManager : MonoBehaviour
     private Dictionary<NeuralNetwork, AIController> birds = new Dictionary<NeuralNetwork, AIController>();
 
     private int currentGeneration = 1;
+    private int birdsAlive;
     private float currentScore = 0.0f;
     private float speed = 10.0f;
 
@@ -57,17 +59,24 @@ public class AIManager : MonoBehaviour
         }
 
         canvasController.UpdateGeneration(currentGeneration, generations);
+        birdsAlive = networksPerGeneration;
+
+        CustomEvents.BirdDied.AddListener(OnBirdDied);
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (!spawner.spawnedFirstObstacle) return;
+        if (!spawner.spawnedFirstObstacle)
+        {
+            Debug.Log("waiting");
+            return;
+        }
 
         if (currentGeneration <= generations)
         {
             // if there is still at least one bird alive
-            if (generation.Count > 0)
+            if (birdsAlive > 0)
             {
                 UpdateInputs();
 
@@ -89,6 +98,7 @@ public class AIManager : MonoBehaviour
                     if (output[0] >= activation)
                     {
                         birds[generation[i]].Jump();
+                        Debug.Log($"Bird {i} jumped");
                     }
 
                     // increate the networks fitness by the amount of distance it covered without dying this frame
@@ -123,6 +133,9 @@ public class AIManager : MonoBehaviour
                 // reset current score
                 currentScore = 0;
 
+                // reset birds alive
+                birdsAlive = networksPerGeneration;
+
                 // clear all pipes
                 spawner.Clean();
             }
@@ -147,5 +160,10 @@ public class AIManager : MonoBehaviour
     {
         // hard coded to the same starting position as the game
         return Instantiate(prefab, new Vector3(-2.14f, 1.55f, -0.265f), Quaternion.identity, transform).GetComponent<AIController>();
+    }
+
+    public void OnBirdDied()
+    {
+        birdsAlive--;
     }
 }
