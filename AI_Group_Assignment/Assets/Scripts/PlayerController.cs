@@ -5,7 +5,6 @@ using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
-    public bool useAI = false;
     [Header("Options")]
     public float jumpHeight = 10;
 
@@ -22,23 +21,22 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (useAI)
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-
-        } else
-        {
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                this.gameObject.GetComponent<Rigidbody2D>().velocity = Vector2.up * jumpHeight;
-            }
+            Jump();
         }
+    }
+
+    public void Jump()
+    {
+        this.gameObject.GetComponent<Rigidbody2D>().velocity = Vector2.up * jumpHeight;
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
         //if(collision.gameObject.tag == "Obstacles")
         //{
-            SceneManager.LoadScene(0);
+        SceneManager.LoadScene(0);
         //}
     }
 }

@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using UnityEngine;
 
 
 // TODO: ability to interface with SaveLoadAI class in order to save and
@@ -245,11 +245,12 @@ using System.Collections.Generic;
 
 namespace AI
 {
-    public class NeuralNetwork
+    public class NeuralNetwork : IComparable<NeuralNetwork>
     {
         int[] layer;
         Layer[] layers;
         float learningRate;
+        public float fitness { get; private set; } = -1.0f;
 
         public NeuralNetwork(int[] layer, float learningRate)
         {
@@ -264,6 +265,46 @@ namespace AI
             {
                 layers[i] = new Layer(layer[i], layer[i + 1]);
             }
+        }
+
+        /// <summary>
+        /// Deep copy constructor
+        /// </summary>
+        /// <param name="reference">the network to make a deep copy of</param>
+        public NeuralNetwork(NeuralNetwork reference)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Mutation constructor
+        /// 
+        /// Take a reference network, deep copy it, and mutate it
+        /// </summary>
+        /// <param name="reference">the network to deep copy and mutate</param>
+        /// <param name="mutationStrength">multiplier for mutation strength</param>
+        public NeuralNetwork(NeuralNetwork reference, float mutationStrength)
+        {
+            // deep copy layer int array
+            this.layer = new int[reference.layer.Length];
+            for (int i = 0; i < reference.layer.Length; i++)
+            {
+                this.layer[i] = reference.layer[i];
+            }
+
+            // deep copy layers layer array
+            this.layers = new Layer[reference.layers.Length];
+            for (int i = 0; i < reference.layers.Length; i++)
+            {
+                this.layers[i] = new Layer(reference.layers[i]);
+                // mutate the weights
+                this.layers[i].Mutate(mutationStrength);
+            }
+
+            this.learningRate = reference.learningRate;
+
+            // TODO: might as well not bother copying fitness since it will be recalculated, right?
+            //this.fitness = reference.fitness;
         }
 
         public float[] FeedForward(float[] inputs)
@@ -299,6 +340,42 @@ namespace AI
                 layers[i].UpdateWeights(learningRate);
             }
         }
+
+        /// <summary>
+        /// Increase the network's fitness
+        /// </summary>
+        /// <param name="value">value to increase by</param>
+        public void IncreaseFitnessBy(float value)
+        {
+            fitness += value;
+        }
+
+        /// <summary>
+        /// Decrease the network's fitness
+        /// </summary>
+        /// <param name="value">value to decrease by</param>
+        public void DecreaseFitnessBy(float value)
+        {
+            fitness -= value;
+        }
+
+
+        /// <summary>
+        /// Compare this network to another based on their fitness
+        /// </summary>
+        /// <param name="other">the network to compare to</param>
+        /// <returns></returns>
+        public int CompareTo(NeuralNetwork other)
+        {
+            if (other == null) return 1;
+
+            if (fitness > other.fitness)
+                return 1;
+            else if (fitness < other.fitness)
+                return -1;
+            else
+                return 0;
+        }
     }
 
     public class Layer
@@ -313,8 +390,8 @@ namespace AI
         public float[] gamma;
         public float[] error;
 
-        public static Random random = new Random(System.DateTime.Now.Millisecond); // always different
-        
+        public static System.Random random = new System.Random(System.DateTime.Now.Millisecond); // always different
+
         public Layer(int numInputs, int numOutputs)
         {
             this.numberOfInputs = numInputs;
@@ -328,6 +405,58 @@ namespace AI
             error = new float[numberOfOutputs];
 
             InitializeWeights();
+        }
+
+        /// <summary>
+        /// Deep copy constructor
+        /// </summary>
+        /// <param name="reference">the reference Layer to make a deep copy of</param>
+        public Layer(Layer reference)
+        {
+            this.numberOfInputs = reference.numberOfInputs;
+            this.numberOfOutputs = reference.numberOfOutputs;
+
+            outputs = new float[numberOfOutputs];
+            for (int i = 0; i < numberOfOutputs; i++)
+            {
+                outputs[i] = reference.outputs[i];
+            }
+
+            inputs = new float[numberOfInputs];
+            for (int i = 0; i < numberOfInputs; i++)
+            {
+                inputs[i] = reference.inputs[i];
+            }
+
+            weights = new float[numberOfOutputs, numberOfInputs];
+            for (int i = 0; i < numberOfOutputs; i++)
+            {
+                for (int j = 0; j < numberOfInputs; j++)
+                {
+                    weights[i, j] = reference.weights[i, j];
+                }
+            }
+
+            deltaWeights = new float[numberOfOutputs, numberOfInputs];
+            for (int i = 0; i < numberOfOutputs; i++)
+            {
+                for (int j = 0; j < numberOfInputs; j++)
+                {
+                    deltaWeights[i, j] = reference.deltaWeights[i, j];
+                }
+            }
+
+            gamma = new float[numberOfOutputs];
+            for (int i = 0; i < numberOfOutputs; i++)
+            {
+                gamma[i] = reference.gamma[i];
+            }
+
+            error = new float[numberOfOutputs];
+            for (int i = 0; i < numberOfOutputs; i++)
+            {
+                error[i] = reference.error[i];
+            }
         }
 
         public void InitializeWeights()
@@ -426,6 +555,46 @@ namespace AI
                 for (int j = 0; j < numberOfInputs; j++)
                 {
                     weights[i, j] -= deltaWeights[i, j] * learningRate;
+                }
+            }
+        }
+
+        public void Mutate(float mutationStrength)
+        {
+            // for each neuron in this layer
+            for (int i = 0; i < numberOfOutputs; i++)
+            {
+                // for each neuron in the previous layer
+                for (int j = 0; j < numberOfInputs; j++)
+                {
+                    float weight = weights[i, j];
+
+                    // random number to choose mutation type
+                    float r = (float)random.NextDouble() * 1000f;
+
+                    // flip weight sign
+                    if (r <= 2.0f)
+                    {
+                        weight *= -1.0f;
+                    }
+                    // randomly reassign between -0.5f and 0.5f
+                    else if (r <= 4.0f)
+                    {
+                        weight = (float)random.NextDouble() - 0.5f;
+                    }
+                    // random increase by a %
+                    else if (r <= 6.0f)
+                    {
+                        weight *= (float)random.NextDouble() + 1.0f;
+                    }
+                    // random decrase to a %
+                    else if (r <= 8.0f)
+                    {
+                        weight *= (float)random.NextDouble();
+                    }
+
+                    // apply mutation (linearly interpolate between current weight value and mutation by mutationStrength)
+                    weights[i, j] = Mathf.Lerp(weights[i, j], weight, mutationStrength);
                 }
             }
         }

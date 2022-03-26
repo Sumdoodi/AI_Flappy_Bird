@@ -9,12 +9,16 @@ public class Spawner : MonoBehaviour
     private float time = 0;
     public GameObject obstacle;
 
+    public bool spawnedFirstObstacle = false;
+
     public float height;
+
+    private List<GameObject> obstacles = new List<GameObject>();
 
     // Start is called before the first frame update
     void Start()
     {
-        
+
     }
 
     // Update is called once per frame
@@ -22,14 +26,39 @@ public class Spawner : MonoBehaviour
     {
         if (time > queueTime)
         {
-            GameObject go = Instantiate(obstacle);
+            GameObject go = Instantiate(obstacle, transform);
             go.transform.position = transform.position + new Vector3(0, Random.Range(-height, height), 0);
+            obstacles.Add(go);
 
             time = 0;
 
             Destroy(go, lifeTime);
+
+            if (!spawnedFirstObstacle) spawnedFirstObstacle = true;
+        }
+
+        if (obstacles.Count > 0)
+        {
+            // the first item in the list should always be a pipe that is 
+            // ahead of the player, we aren't interested in the others
+            if (obstacles[0].GetComponent<Pipes>().isAhead == false)
+            {
+                obstacles.RemoveAt(0);
+            }
         }
 
         time += Time.deltaTime;
+    }
+
+    public Vector3 GetCurrentObstacle()
+    {
+        return obstacles[0].transform.position;
+    }
+
+    public void Clean()
+    {
+        foreach (Transform child in transform)
+            Destroy(child);
+        time = 0;
     }
 }
