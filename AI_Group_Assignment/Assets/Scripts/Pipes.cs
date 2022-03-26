@@ -18,9 +18,9 @@ public class Pipes : MonoBehaviour
             isAhead = false;
         }
 
-        if (this.gameObject.transform.position.x < -5)
-        {
-            Destroy(this);
-        }
+        //if (this.gameObject.transform.position.x < -5)
+        //{
+        //    Destroy(this);
+        //}
     }
 }

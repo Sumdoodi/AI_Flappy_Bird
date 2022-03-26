@@ -21,7 +21,7 @@ public class AIManager : MonoBehaviour
 
     [Header("Network Parameters")]
     public int[] hiddenLayers;
-    public float learningRate;
+    public float mutationStrength;
     public float activation;
 
     [Header("Bird Prefab")]
@@ -53,7 +53,7 @@ public class AIManager : MonoBehaviour
 
         for (int i = 0; i < networksPerGeneration; i++)
         {
-            NeuralNetwork current = new NeuralNetwork(netLayers.ToArray(), learningRate);
+            NeuralNetwork current = new NeuralNetwork(netLayers.ToArray(), mutationStrength);
             generation.Add(current);
             birds[current] = NewBird();
         }
@@ -61,7 +61,7 @@ public class AIManager : MonoBehaviour
         canvasController.UpdateGeneration(currentGeneration, generations);
         birdsAlive = networksPerGeneration;
 
-        CustomEvents.BirdDied.AddListener(OnBirdDied);
+        CustomEvents.Instance.BirdDied.AddListener(OnBirdDied);
     }
 
     // Update is called once per frame
@@ -69,21 +69,33 @@ public class AIManager : MonoBehaviour
     {
         if (!spawner.spawnedFirstObstacle)
         {
-            Debug.Log("waiting");
+            //Debug.Log("waiting");
             return;
         }
+
 
         if (currentGeneration <= generations)
         {
             // if there is still at least one bird alive
             if (birdsAlive > 0)
             {
+                
                 UpdateInputs();
 
                 for (int i = 0; i < generation.Count; i++)
                 {
+                    try
+                    {
+                        AIController temp;
+                        birds.TryGetValue(generation[i], out temp);
+                    }
+                    catch
+                    {
+                        Debug.Log("generation[i] not found failed");
+                    }
+
                     // skip if the AI died
-                    if (birds[generation[i]].dead) continue;
+                    if (birds[generation[i]].gameObject.activeSelf == false) continue;
 
                     // ask network for its decision
                     float[] output = generation[i].FeedForward(new float[] {
@@ -94,6 +106,7 @@ public class AIManager : MonoBehaviour
                         pipeLowerHeight                                                 // next pipe's lower bound
                     });
 
+                    Debug.Log(output[0]);
                     // make the bird just if the network's output is greater than the activation
                     if (output[0] >= activation)
                     {
@@ -114,13 +127,16 @@ public class AIManager : MonoBehaviour
                 generation.Sort();
 
                 // reset generation list while keeping top performer
-                List<NeuralNetwork> nextGen = new List<NeuralNetwork>() { generation[0] };
-                generation = nextGen;
+                NeuralNetwork temp = generation[0];
+                generation.Clear();
+                generation.Add(temp);
+
+                birds[generation[0]] = NewBird();
 
                 // fill the rest of the list with mutated versions of the top performer
                 for (int i = 1; i < networksPerGeneration; i++)
                 {
-                    generation[i] = new NeuralNetwork(generation[0], 0.25f);
+                    generation.Add(new NeuralNetwork(generation[0], 0.25f));
                     birds[generation[i]] = NewBird();
                 }
 
@@ -165,5 +181,6 @@ public class AIManager : MonoBehaviour
     public void OnBirdDied()
     {
         birdsAlive--;
+        Debug.Log("biird dead");
     }
 }

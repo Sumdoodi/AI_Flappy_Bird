@@ -18,7 +18,7 @@ public class Spawner : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-
+        time = queueTime;
     }
 
     // Update is called once per frame
@@ -57,8 +57,10 @@ public class Spawner : MonoBehaviour
 
     public void Clean()
     {
+        obstacles.Clear();
         foreach (Transform child in transform)
-            Destroy(child);
-        time = 0;
+            Destroy(child.gameObject);
+        time = queueTime;
+        spawnedFirstObstacle = false;
     }
 }

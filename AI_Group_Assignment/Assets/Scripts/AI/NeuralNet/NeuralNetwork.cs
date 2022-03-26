@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 
 
+
 // TODO: ability to interface with SaveLoadAI class in order to save and
 // load the neural network to and from the disk
 
@@ -301,10 +302,6 @@ namespace AI
                 this.layers[i].Mutate(mutationStrength);
             }
 
-            this.learningRate = reference.learningRate;
-
-            // TODO: might as well not bother copying fitness since it will be recalculated, right?
-            //this.fitness = reference.fitness;
         }
 
         public float[] FeedForward(float[] inputs)
@@ -319,6 +316,8 @@ namespace AI
 
             return layers[layers.Length - 1].outputs; // return output from last layer
         }
+
+        
 
         public void BackPropagation(float[] expected)
         {
@@ -437,26 +436,27 @@ namespace AI
                 }
             }
 
-            deltaWeights = new float[numberOfOutputs, numberOfInputs];
-            for (int i = 0; i < numberOfOutputs; i++)
-            {
-                for (int j = 0; j < numberOfInputs; j++)
-                {
-                    deltaWeights[i, j] = reference.deltaWeights[i, j];
-                }
-            }
-
-            gamma = new float[numberOfOutputs];
-            for (int i = 0; i < numberOfOutputs; i++)
-            {
-                gamma[i] = reference.gamma[i];
-            }
-
-            error = new float[numberOfOutputs];
-            for (int i = 0; i < numberOfOutputs; i++)
-            {
-                error[i] = reference.error[i];
-            }
+            //deltaWeights = new float[numberOfOutputs, numberOfInputs];
+            //for (int i = 0; i < numberOfOutputs; i++)
+            //{
+            //    for (int j = 0; j < numberOfInputs; j++)
+            //    {
+            //        deltaWeights[i, j] = reference.deltaWeights[i, j];
+            //        Debug.Log(deltaWeights[i, j]);
+            //    }
+            //}
+            //
+            //gamma = new float[numberOfOutputs];
+            //for (int i = 0; i < numberOfOutputs; i++)
+            //{
+            //    gamma[i] = reference.gamma[i];
+            //}
+            //
+            //error = new float[numberOfOutputs];
+            //for (int i = 0; i < numberOfOutputs; i++)
+            //{
+            //    error[i] = reference.error[i];
+            //}
         }
 
         public void InitializeWeights()
@@ -488,11 +488,17 @@ namespace AI
                     outputs[i] += inputs[j] * weights[i, j];
                 }
 
-                outputs[i] = (float)Math.Tanh(outputs[i]);
+                outputs[i] = (float)Sigmoid(outputs[i]) - 0.5f;
             }
 
             return outputs;
         }
+        public static float Sigmoid(double value)
+        {
+            float k = (float)Math.Exp(value);
+            return k / (1.0f + k);
+        }
+
 
         /// <summary>
         /// Calculate the derivative of a TanH value
@@ -570,31 +576,31 @@ namespace AI
                     float weight = weights[i, j];
 
                     // random number to choose mutation type
-                    float r = (float)random.NextDouble() * 1000f;
+                    float r = (float)random.NextDouble() - 0.5f;
 
-                    // flip weight sign
-                    if (r <= 2.0f)
-                    {
-                        weight *= -1.0f;
-                    }
-                    // randomly reassign between -0.5f and 0.5f
-                    else if (r <= 4.0f)
-                    {
-                        weight = (float)random.NextDouble() - 0.5f;
-                    }
+                    //// flip weight sign
+                    //if (r <= 25.0f)
+                    //{
+                    //    weight *= -1.0f;
+                    //}
+                    //// randomly reassign between -0.5f and 0.5f
+                    //else if (r <= 50.0f)
+                    //{
+                    //    weight = (float)random.NextDouble() - 0.5f;
+                    //}
                     // random increase by a %
-                    else if (r <= 6.0f)
-                    {
-                        weight *= (float)random.NextDouble() + 1.0f;
-                    }
-                    // random decrase to a %
-                    else if (r <= 8.0f)
-                    {
-                        weight *= (float)random.NextDouble();
-                    }
+                    //if (r <= 50.0f)
+                    //{
+                    //    weight *= (float)random.NextDouble() + 1.0f;
+                    //}
+                    //// random decrase to a %
+                    //else if (r <= 100.0f)
+                    //{
+                    //    weight *= (float)random.NextDouble();
+                    //}
 
                     // apply mutation (linearly interpolate between current weight value and mutation by mutationStrength)
-                    weights[i, j] = Mathf.Lerp(weights[i, j], weight, mutationStrength);
+                    weights[i, j] += r * mutationStrength; // Mathf.Lerp(weights[i, j], weight, mutationStrength);
                 }
             }
         }
