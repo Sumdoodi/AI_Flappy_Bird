@@ -231,11 +231,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3963f035db5b18e41be00a02d307945b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  generations: 1000
+  generations: 1000000
   networksPerGeneration: 10
-  hiddenLayers: 080000000a00000008000000
+  hiddenLayers: 190000000f0000000a000000
   mutationStrength: 0.03
-  activation: 0.4
+  activation: 0.49
   prefab: {fileID: 2530800421683289856, guid: 99ebf966cd5bd8349b607c71e8b2e371, type: 3}
   spawner: {fileID: 1378615811}
   canvasController: {fileID: 1742265326}
