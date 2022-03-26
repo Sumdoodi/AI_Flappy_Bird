@@ -8,6 +8,16 @@ public class CanvasController : MonoBehaviour
     public GameObject generationText;
     public GameObject controlledBy;
     public GameObject completion;
+    public GameObject networkOutput;
+    public GameObject networkOutputRaw;
+
+    private Color netOutInitColour;
+
+    private void Start()
+    {
+        netOutInitColour = networkOutput.transform.GetChild(1).GetComponent<Text>().color;
+        networkOutput.transform.GetChild(1).GetComponent<Text>().color = new Color(netOutInitColour.r, netOutInitColour.g, netOutInitColour.b, 0.0f);
+    }
 
     public void SetTrainingType(TrainingType type)
     {
@@ -31,7 +41,7 @@ public class CanvasController : MonoBehaviour
         generationText.transform.GetChild(1).GetComponent<Text>().text = $"{current}/{total}";
     }
 
-    public void UpdateBackPropagation(bool controlledByPlayer, double percentComplete)
+    public void UpdateBackPropagation(bool controlledByPlayer, double percentComplete, bool netDidJump, float netRawOut)
     {
         if (controlledByPlayer)
         {
@@ -42,6 +52,33 @@ public class CanvasController : MonoBehaviour
             controlledBy.transform.GetChild(1).GetComponent<Text>().text = "AI";
         }
 
-        completion.transform.GetChild(1).GetComponent<Text>().text = $"{percentComplete}%";
+        if (percentComplete % 1 == 0)
+        {
+            completion.transform.GetChild(1).GetComponent<Text>().text = $"{percentComplete}.0%";
+        }
+        else
+        {
+            completion.transform.GetChild(1).GetComponent<Text>().text = $"{percentComplete}%";
+        }
+
+        if (netDidJump)
+        {
+            networkOutput.transform.GetChild(1).GetComponent<Text>().color = netOutInitColour;
+        }
+
+        networkOutputRaw.transform.GetChild(1).GetComponent<Text>().text = $"{netRawOut}";
+    }
+
+    private void Update()
+    {
+        if (networkOutput.transform.GetChild(1).GetComponent<Text>().color.a > 0)
+        {
+            networkOutput.transform.GetChild(1).GetComponent<Text>().color = new Color(
+                netOutInitColour.r,
+                netOutInitColour.g,
+                netOutInitColour.b,
+                networkOutput.transform.GetChild(1).GetComponent<Text>().color.a - Time.deltaTime
+                );
+        }
     }
 }

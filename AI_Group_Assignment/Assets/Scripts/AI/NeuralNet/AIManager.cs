@@ -59,6 +59,8 @@ public class AIManager : MonoBehaviour
     private NeuralNetwork bpNetwork;
     private BirdController birdController;
     private bool died = false;
+    private bool netDidJump = false;
+    private float[] netRawOut;
 
     // Start is called before the first frame update
     void Start()
@@ -85,7 +87,7 @@ public class AIManager : MonoBehaviour
                 // spawn bird
                 birdController = Instantiate(backPropagationPrefab, new Vector3(-2.14f, 1.55f, -0.265f), Quaternion.identity).GetComponent<BirdController>();
                 bpNetwork = new NeuralNetwork(netLayers.ToArray(), learningRate);
-                canvasController.UpdateBackPropagation(isPlayerControlled, 0.0f);
+                canvasController.UpdateBackPropagation(isPlayerControlled, 0.0d, false, 0.0f);
                 break;
         }
 
@@ -231,7 +233,7 @@ public class AIManager : MonoBehaviour
                         }
 
                         // teach the network
-                        bpNetwork.FeedForward(new float[]
+                        netRawOut = bpNetwork.FeedForward(new float[]
                         {
                             birdController.transform.position.y,
                             birdController.gameObject.GetComponent<Rigidbody2D>().velocity.y,
@@ -239,6 +241,9 @@ public class AIManager : MonoBehaviour
                             pipeUpperHeight,
                             pipeLowerHeight
                         });
+                        Debug.Log(netRawOut[0]);
+                        if (netRawOut[0] >= activation)
+                            netDidJump = true;
 
                         if (playerDidJump)
                         {
@@ -293,8 +298,10 @@ public class AIManager : MonoBehaviour
     private void UpdateUI()
     {
         double percentComplete = (double)dataPointsCollected / targetDataPoints * 100.0d;
-        percentComplete = System.Math.Round(percentComplete, 1); // round to one decimal
-        canvasController.UpdateBackPropagation(isPlayerControlled, percentComplete);
+        percentComplete = System.Math.Round(percentComplete, 1); // round to one decimal places
+        //double netRawOutRound = System.Math.Round(netRawOut[0], 2); // round to two decimal places
+        canvasController.UpdateBackPropagation(isPlayerControlled, percentComplete, netDidJump, netRawOut[0]);
+        netDidJump = false;
     }
 
     public void OnBirdDied()
