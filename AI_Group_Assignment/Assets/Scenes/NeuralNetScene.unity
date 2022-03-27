@@ -395,8 +395,8 @@ MonoBehaviour:
   learningRate: 0.033
   initialRateModifier: 3
   targetDataPoints: 100000
-  activation: 0.49
-  hiddenLayers: 190000000f0000000a000000
+  activation: -0.49
+  hiddenLayers: 0800000008000000
   generationPrefab: {fileID: 2530800421683289856, guid: 99ebf966cd5bd8349b607c71e8b2e371, type: 3}
   backPropagationPrefab: {fileID: 2530800421683289856, guid: e61b70162c157ba4884f8e996b1da0d9, type: 3}
   spawner: {fileID: 1378615811}
