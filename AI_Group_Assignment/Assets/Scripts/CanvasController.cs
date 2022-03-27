@@ -10,8 +10,13 @@ public class CanvasController : MonoBehaviour
     public GameObject completion;
     public GameObject networkOutput;
     public GameObject networkOutputRaw;
+    public GameObject networkAvgOutput;
 
     private Color netOutInitColour;
+    private TrainingType trainingType;
+
+    public Color positiveColour;
+    public Color negativeColour;
 
     private void Start()
     {
@@ -21,24 +26,39 @@ public class CanvasController : MonoBehaviour
 
     public void SetTrainingType(TrainingType type)
     {
+        trainingType = type;
         switch (type)
         {
             case TrainingType.GENERATIONS:
                 generationText.gameObject.SetActive(true);
                 controlledBy.gameObject.SetActive(false);
                 completion.gameObject.SetActive(false);
+                networkOutput.gameObject.SetActive(false);
+                networkOutputRaw.gameObject.SetActive(false);
+                networkAvgOutput.gameObject.SetActive(true);
                 break;
             case TrainingType.BACK_PROPAGATION:
                 generationText.gameObject.SetActive(false);
                 controlledBy.gameObject.SetActive(true);
                 completion.gameObject.SetActive(true);
+                networkOutput.gameObject.SetActive(true);
+                networkOutputRaw.gameObject.SetActive(true);
+                networkAvgOutput.gameObject.SetActive(false);
                 break;
         }
     }
 
-    public void UpdateGeneration(int current, int total)
+    public void UpdateGeneration(int current, int total, double netAvg)
     {
         generationText.transform.GetChild(1).GetComponent<Text>().text = $"{current}/{total}";
+        networkAvgOutput.transform.GetChild(1).GetComponent<Text>().text = $"{netAvg}";
+
+        if (netAvg > 0)
+            networkAvgOutput.transform.GetChild(1).GetComponent<Text>().color = positiveColour;
+        else if (netAvg < 0)
+            networkAvgOutput.transform.GetChild(1).GetComponent<Text>().color = negativeColour;
+        else
+            networkAvgOutput.transform.GetChild(1).GetComponent<Text>().color = Color.white;
     }
 
     public void UpdateBackPropagation(bool controlledByPlayer, double percentComplete, bool netDidJump, double netRawOut)
@@ -71,6 +91,8 @@ public class CanvasController : MonoBehaviour
 
     private void Update()
     {
+        if (trainingType == TrainingType.GENERATIONS) return;
+
         if (networkOutput.transform.GetChild(1).GetComponent<Text>().color.a > 0)
         {
             networkOutput.transform.GetChild(1).GetComponent<Text>().color = new Color(

@@ -284,7 +284,7 @@ namespace AI
         /// </summary>
         /// <param name="reference">the network to deep copy and mutate</param>
         /// <param name="mutationStrength">multiplier for mutation strength</param>
-        public NeuralNetwork(NeuralNetwork reference, float mutationStrength)
+        public NeuralNetwork(NeuralNetwork reference, float mutationStrength, float mutationModifier)
         {
             // deep copy layer int array
             this.layer = new int[reference.layer.Length];
@@ -299,7 +299,7 @@ namespace AI
             {
                 this.layers[i] = new Layer(reference.layers[i]);
                 // mutate the weights
-                this.layers[i].Mutate(mutationStrength);
+                this.layers[i].Mutate(mutationStrength, mutationModifier);
             }
 
         }
@@ -319,7 +319,7 @@ namespace AI
 
 
 
-        public void BackPropagation(float[] expected)
+        public void BackPropagation(float[] expected, float learningRateModifier)
         {
             for (int i = layers.Length - 1; i >= 0; i--)
             {
@@ -336,7 +336,7 @@ namespace AI
             // for each layer, skipping the input layer
             for (int i = 0; i < layers.Length; i++)
             {
-                layers[i].UpdateWeights(learningRate);
+                layers[i].UpdateWeights(learningRate, learningRateModifier);
             }
         }
 
@@ -468,7 +468,11 @@ namespace AI
                 for (int j = 0; j < numberOfInputs; j++)
                 {
                     // set the weight randomly between -0.5f and 0.5f
-                    weights[i, j] = (float)random.NextDouble() - 0.5f;
+                    //weights[i, j] = (float)random.NextDouble() - 0.5f;
+
+                    // allow only high popsitive weights (0.485 to 0.495)
+                    // at the beginning to incentivize activations
+                    weights[i, j] = 0.8f;//0.485f + 0.01f * (float)random.NextDouble();
                 }
             }
         }
@@ -557,7 +561,7 @@ namespace AI
             }
         }
 
-        public void UpdateWeights(float learningRate)
+        public void UpdateWeights(float learningRate, float learningRateModifier)
         {
             // for each neuron in this layer
             for (int i = 0; i < numberOfOutputs; i++)
@@ -565,12 +569,12 @@ namespace AI
                 // for each neuron in the previous layer
                 for (int j = 0; j < numberOfInputs; j++)
                 {
-                    weights[i, j] -= deltaWeights[i, j] * learningRate;
+                    weights[i, j] -= deltaWeights[i, j] * (learningRate * learningRateModifier);
                 }
             }
         }
 
-        public void Mutate(float mutationStrength)
+        public void Mutate(float mutationStrength, float mutationModifier)
         {
             // for each neuron in this layer
             for (int i = 0; i < numberOfOutputs; i++)
@@ -605,7 +609,7 @@ namespace AI
                     //}
 
                     // apply mutation (linearly interpolate between current weight value and mutation by mutationStrength)
-                    weights[i, j] += r * mutationStrength; // Mathf.Lerp(weights[i, j], weight, mutationStrength);
+                    weights[i, j] += r * mutationStrength * mutationModifier; // Mathf.Lerp(weights[i, j], weight, mutationStrength);
                 }
             }
         }

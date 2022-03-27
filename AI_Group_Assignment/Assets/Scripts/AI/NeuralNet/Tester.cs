@@ -26,28 +26,28 @@ public class Tester : MonoBehaviour
         for (int i = 0; i < itterations; i++)
         {
             network.FeedForward(new float[] { 0, 0, 0 });
-            network.BackPropagation(new float[] { 0 });
+            network.BackPropagation(new float[] { 0 }, 1.0f);
 
             network.FeedForward(new float[] { 0, 0, 1 });
-            network.BackPropagation(new float[] { 1 });
+            network.BackPropagation(new float[] { 1 }, 1.0f);
 
             network.FeedForward(new float[] { 0, 1, 0 });
-            network.BackPropagation(new float[] { 1 });
+            network.BackPropagation(new float[] { 1 }, 1.0f);
 
             network.FeedForward(new float[] { 0, 1, 1 });
-            network.BackPropagation(new float[] { 0 });
+            network.BackPropagation(new float[] { 0 }, 1.0f);
 
             network.FeedForward(new float[] { 1, 0, 0 });
-            network.BackPropagation(new float[] { 1 });
+            network.BackPropagation(new float[] { 1 }, 1.0f);
 
             network.FeedForward(new float[] { 1, 0, 1 });
-            network.BackPropagation(new float[] { 0 });
+            network.BackPropagation(new float[] { 0 }, 1.0f);
 
             network.FeedForward(new float[] { 1, 1, 0 });
-            network.BackPropagation(new float[] { 0 });
+            network.BackPropagation(new float[] { 0 }, 1.0f);
 
             network.FeedForward(new float[] { 1, 1, 1 });
-            network.BackPropagation(new float[] { 1 });
+            network.BackPropagation(new float[] { 1 }, 1.0f);
         }
 
         endTime = DateTime.Now;

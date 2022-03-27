@@ -24,9 +24,11 @@ public class AIManager : MonoBehaviour
     public int generations;
     public int networksPerGeneration;
     public float mutationStrength;
+    public float initialMutationModifier; // has a half life of generations / 2
 
     [Header("Back Propagation Training Parameters")]
     public float learningRate;
+    public float initialRateModifier;
     public uint targetDataPoints;
 
     [Header("Network Parameters")]
@@ -79,7 +81,7 @@ public class AIManager : MonoBehaviour
                     NeuralNetwork current = new NeuralNetwork(netLayers.ToArray(), mutationStrength);
                     generation.Add(current);
                     birds[current] = NewBird();
-                    canvasController.UpdateGeneration(currentGeneration, generations);
+                    canvasController.UpdateGeneration(currentGeneration, generations, 0.0d);
                     birdsAlive = networksPerGeneration;
                 }
                 break;
@@ -118,6 +120,7 @@ public class AIManager : MonoBehaviour
 
                             UpdateInputs();
 
+                            float totalOut = 0.0f;
                             for (int i = 0; i < generation.Count; i++)
                             {
                                 try
@@ -135,15 +138,17 @@ public class AIManager : MonoBehaviour
 
                                 // ask network for its decision
                                 float[] output = generation[i].FeedForward(new float[] {
-                        birds[generation[i]].transform.position.y,                      // the bird's height
-                        birds[generation[i]].GetComponent<Rigidbody2D>().velocity.y,    // the bird's vertical velocity
-                        pipeXPos - birds[generation[i]].transform.position.x,           // distance to the next pipe
-                        pipeUpperHeight,                                                // next pipe's upper bound
-                        pipeLowerHeight                                                 // next pipe's lower bound
-                    });
+                                    birds[generation[i]].transform.position.y,                      // the bird's height
+                                    birds[generation[i]].GetComponent<Rigidbody2D>().velocity.y,    // the bird's vertical velocity
+                                    pipeXPos - birds[generation[i]].transform.position.x,           // distance to the next pipe
+                                    pipeUpperHeight,                                                // next pipe's upper bound
+                                    pipeLowerHeight                                                 // next pipe's lower bound
+                                });
 
-                                Debug.Log(output[0]);
-                                // make the bird just if the network's output is greater than the activation
+                                totalOut += output[0];
+
+                                //Debug.Log(output[0]);
+                                // make the bird jump if the network's output is greater than the activation
                                 if (output[0] >= activation)
                                 {
                                     birds[generation[i]].Jump();
@@ -153,6 +158,8 @@ public class AIManager : MonoBehaviour
                                 // increate the networks fitness by the amount of distance it covered without dying this frame
                                 generation[i].IncreaseFitnessBy(Time.deltaTime * speed);
                             }
+                            double avgOut = System.Math.Round(totalOut / networksPerGeneration, 2);
+                            canvasController.UpdateGeneration(currentGeneration, generations, avgOut);
                         }
                         else // end of generation
                         {
@@ -169,10 +176,13 @@ public class AIManager : MonoBehaviour
 
                             birds[generation[0]] = NewBird();
 
+                            // calculate current modifier from its half life
+                            float currentModifier = initialMutationModifier * Mathf.Pow(0.5f, currentGeneration / (generations / 2));
+
                             // fill the rest of the list with mutated versions of the top performer
                             for (int i = 1; i < networksPerGeneration; i++)
                             {
-                                generation.Add(new NeuralNetwork(generation[0], 0.25f));
+                                generation.Add(new NeuralNetwork(generation[0], 0.25f, currentModifier));
                                 birds[generation[i]] = NewBird();
                             }
 
@@ -180,7 +190,7 @@ public class AIManager : MonoBehaviour
                             currentGeneration++;
 
                             // update generation UI text
-                            canvasController.UpdateGeneration(currentGeneration, generations);
+                            canvasController.UpdateGeneration(currentGeneration, generations, 0.0d);
 
                             // reset current score
                             currentScore = 0;
@@ -241,18 +251,34 @@ public class AIManager : MonoBehaviour
                             pipeUpperHeight,
                             pipeLowerHeight
                         });
-                        Debug.Log(netRawOut[0]);
+
                         if (netRawOut[0] >= activation)
                             netDidJump = true;
 
+                        //// Only teach the network if the decision was wrong
+                        //if (playerDidJump != netDidJump)
+                        //{
+                        //    float currentModifier = initialRateModifier * Mathf.Pow(0.5f, dataPointsCollected / (targetDataPoints / 2));
+                        //    if (playerDidJump)
+                        //    {
+                        //        bpNetwork.BackPropagation(new float[] { 0.5f }, currentModifier);
+                        //    }
+                        //    else
+                        //    {
+                        //        bpNetwork.BackPropagation(new float[] { -0.5f }, currentModifier);
+                        //    }
+                        //}
+
+                        float currentModifier = initialRateModifier * Mathf.Pow(0.5f, dataPointsCollected / (targetDataPoints / 2));
                         if (playerDidJump)
                         {
-                            bpNetwork.BackPropagation(new float[] { 0.5f });
+                            bpNetwork.BackPropagation(new float[] { 0.5f }, currentModifier);
                         }
                         else
                         {
-                            bpNetwork.BackPropagation(new float[] { -0.5f });
+                            bpNetwork.BackPropagation(new float[] { -0.5f }, currentModifier);
                         }
+
 
                         dataPointsCollected += 1;
 
